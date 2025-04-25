@@ -13,5 +13,5 @@ You can imagine a possible grouping of the txs
 */
 
 fn main() {
-    println!("Hello, world!");
+    println!("Good morning BDK!");
 }
