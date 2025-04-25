@@ -1,0 +1,7 @@
+[package]
+name = "package_selector"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bdk_chain = { path = "../../bdk/crates/chain" }
