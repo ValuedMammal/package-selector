@@ -116,6 +116,43 @@ impl<A: Anchor> PackageSelector<A> {
             descendants.extend(self.graph.walk_descendants(txid, |_, txid| Some(txid)));
         }
     }
+
+    // Level 2: Select packages
+
+    /// Select groups of related transactions into non-overlapping packages.
+    ///
+    /// A package is defined as a single tx and all of its not-yet-selected ancestors.
+    /// Packages are created and returned in order of chain position of the terminal child.
+    pub fn select(&self) -> Vec<Vec<Txid>> {
+        let mut visited = HashSet::new();
+        let mut ret = vec![];
+
+        // Locate the terminal children
+        let mut children = self
+            .map
+            .values()
+            .filter(|e| e.descendants.len() == 1)
+            .collect::<Vec<_>>();
+        children.sort_by_key(|e| e.chain_position.as_ref());
+
+        for entry in children {
+            // Create package
+            let mut package = vec![];
+            for txid in &entry.ancestors {
+                let entry = self.map.get(txid).expect("entry must exist");
+                if visited.insert(entry.txid) {
+                    package.push(entry);
+                }
+            }
+            // Sort package txs topologically
+            package.sort_by_key(|e| e.ancestors.len());
+
+            let package: Vec<Txid> = package.into_iter().map(|e| e.txid).collect();
+            ret.push(package);
+        }
+
+        ret
+    }
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -151,7 +188,15 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let selector = PackageSelector::<BlockId>::new(txs);
-    dbg!(&selector.map);
+    // dbg!(&selector.map);
+
+    // L2 demo: select packages
+    let packages: Vec<Vec<Txid>> = selector.select();
+    assert_eq!(packages.len(), 1);
+
+    assert_eq!(&packages[0], &exp_txids[..]);
+
+    println!("Package: {:#?}", packages[0]);
 
     Ok(())
 }
